@@ -111,6 +111,34 @@ Response:
 - `200 OK` - returns `token` and authenticated `user` data
 - `400 Bad Request` - invalid credentials or validation error
 
+### Register captain
+
+`POST /captains/register`
+
+Request body:
+
+```json
+{
+  "fullname": {
+    "firstname": "Jane",
+    "lastname": "Doe"
+  },
+  "email": "jane@example.com",
+  "password": "password123",
+  "vehicle": {
+    "color": "blue",
+    "plate": "ABC123",
+    "capacity": 4,
+    "vehicleType": "car"
+  }
+}
+```
+
+Response:
+
+- `201 Created` - returns `token` and new `captain` data without password
+- `400 Bad Request` - invalid input, missing fields, or duplicate email
+
 ### Get user profile
 
 `GET /users/profile`
@@ -158,12 +186,16 @@ backend/
     db.js
   models/
     user.model.js
+    captain.model.js
   routes/
     user.routes.js
+    captain.routes.js
   controller/
     user.controller.js
+    captain.controller.js
   services/
     user.service.js
+    captain.service.js
   middlewares/
     auth.middleware.js
 ```
