@@ -4,18 +4,24 @@ This folder contains the backend API for the Uber-like application.
 
 ## Overview
 
-This backend provides a simple Express API with user registration and login functionality.
-It uses MongoDB for data persistence, JWT for authentication, and request validation.
+The backend is built with Express, MongoDB, Mongoose, JWT authentication, and request validation.
+It exposes separate authentication endpoints for users and captains, plus a health check route.
 
 ### Main files
 
 - `server.js` - creates and starts the HTTP server.
 - `app.js` - configures Express, middleware, routes, and database connection.
 - `db/db.js` - connects to MongoDB using Mongoose.
-- `models/user.model.js` - defines the `User` schema and hashing/token helpers.
-- `routes/user.routes.js` - authentication route definitions.
-- `controller/user.controller.js` - request validation and controller logic.
-- `services/user.service.js` - business logic for user operations.
+- `models/user.model.js` - defines the user schema, password hashing, and JWT token generation.
+- `models/captain.model.js` - defines the captain schema, password hashing, and JWT token generation.
+- `models/blackListToken.js` - stores blacklisted JWTs for logout handling.
+- `routes/user.routes.js` - user authentication route definitions.
+- `routes/captain.routes.js` - captain authentication route definitions.
+- `controller/user.controller.js` - user request validation and controller logic.
+- `controller/captain.controller.js` - captain request validation and controller logic.
+- `services/user.service.js` - business logic for user creation.
+- `services/captain.service.js` - business logic for captain creation.
+- `middlewares/auth.middleware.js` - protects profile/logout routes and validates JWTs.
 
 ## Prerequisites
 
@@ -41,7 +47,7 @@ MONGO_URI=your_mongo_connection_string
 JWT_SECRET=your_jwt_secret
 ```
 
-### Optional
+### Required
 
 - `PORT` - port used by the server, defaults to `3000`.
 - `MONGO_URI` - MongoDB connection URI.
@@ -63,7 +69,7 @@ npx nodemon server.js
 
 ## API Endpoints
 
-### Health check
+### Health Check
 
 `GET /`
 
@@ -71,7 +77,9 @@ Response:
 
 - `200 OK` with body `Hello World!`
 
-### Register user
+### User Endpoints
+
+#### Register User
 
 `POST /users/register`
 
@@ -88,12 +96,18 @@ Request body:
 }
 ```
 
+Validation:
+
+- `email` must be a valid email.
+- `fullname.firstname` must be at least 3 characters.
+- `password` must be at least 6 characters.
+
 Response:
 
-- `201 Created` - returns `token` and new `user` data without password
-- `400 Bad Request` - invalid input or missing fields
+- `201 Created` - returns `token` and created `user` data.
+- `400 Bad Request` - invalid input or email already exists.
 
-### Login user
+#### Login User
 
 `POST /users/login`
 
@@ -106,12 +120,47 @@ Request body:
 }
 ```
 
+Validation:
+
+- `email` must be a valid email.
+- `password` must be at least 6 characters.
+
 Response:
 
-- `200 OK` - returns `token` and authenticated `user` data
-- `400 Bad Request` - invalid credentials or validation error
+- `200 OK` - returns `token` and authenticated `user` data.
+- `400 Bad Request` - invalid credentials or validation error.
 
-### Register captain
+#### Get User Profile
+
+`GET /users/profile`
+
+Details:
+
+- Protected endpoint requiring a valid JWT.
+- Token may be provided via the `token` cookie or the `Authorization` header as `Bearer <token>`.
+
+Response:
+
+- `200 OK` - authenticated user profile.
+- `401 Unauthorized` - missing, invalid, or blacklisted token.
+
+#### Logout User
+
+`GET /users/logout`
+
+Details:
+
+- Protected endpoint requiring a valid JWT.
+- The token is blacklisted and the `token` cookie is cleared.
+
+Response:
+
+- `200 OK` - `{ "message": "Logged out successfully" }`
+- `401 Unauthorized` - missing, invalid, or blacklisted token.
+
+### Captain Endpoints
+
+#### Register Captain
 
 `POST /captains/register`
 
@@ -134,68 +183,97 @@ Request body:
 }
 ```
 
-Response:
+Validation:
 
-- `201 Created` - returns `token` and new `captain` data without password
-- `400 Bad Request` - invalid input, missing fields, or duplicate email
-
-### Get user profile
-
-`GET /users/profile`
-
-Details:
-
-- Protected endpoint, requires a valid JWT token.
-- Token can be provided either via the `token` cookie or the `Authorization` header as `Bearer <token>`.
+- `fullname.firstname` must be at least 3 characters.
+- `email` must be a valid email.
+- `password` must be at least 6 characters.
+- `vehicle.color` must be at least 3 characters.
+- `vehicle.plate` must be at least 3 characters.
+- `vehicle.capacity` must be an integer of at least 1.
+- `vehicle.vehicleType` must be one of `car`, `motorcycle`, or `auto`.
 
 Response:
 
-- `200 OK` - returns the authenticated user's profile data
-- `401 Unauthorized` - missing, invalid, or blacklisted token
+- `201 Created` - returns `token` and created `captain` data.
+- `400 Bad Request` - invalid input or email already exists.
 
-### Logout user
+#### Login Captain
 
-`GET /users/logout`
+`POST /captains/login`
+
+Request body:
+
+```json
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+```
+
+Validation:
+
+- `email` must be a valid email.
+- `password` must be at least 6 characters.
+
+Response:
+
+- `200 OK` - returns `token` and authenticated `captain` data.
+- `400 Bad Request` - invalid credentials or validation error.
+
+#### Get Captain Profile
+
+`GET /captains/profile`
 
 Details:
 
-- Protected endpoint, requires a valid JWT token.
-- Clears the `token` cookie and blacklists the token on logout.
+- Protected endpoint requiring a valid JWT.
+- Token may be provided via the `token` cookie or the `Authorization` header as `Bearer <token>`.
+
+Response:
+
+- `200 OK` - authenticated captain profile.
+- `401 Unauthorized` - missing, invalid, or blacklisted token.
+
+#### Logout Captain
+
+`GET /captains/logout`
+
+Details:
+
+- Protected endpoint requiring a valid JWT.
+- The token is blacklisted and the `token` cookie is cleared.
 
 Response:
 
 - `200 OK` - `{ "message": "Logged out successfully" }`
-- `401 Unauthorized` - missing, invalid, or blacklisted token
+- `401 Unauthorized` - missing, invalid, or blacklisted token.
+
+## Auth Details
+
+- JWT tokens are generated when a user or captain logs in or registers.
+- Tokens are sent in HTTP-only cookies and can also be passed via `Authorization: Bearer <token>`.
+- Blacklisted tokens are stored in `models/blackListToken.js` during logout.
+
+## Full File Map
+
+- `app.js` - app initialization, middleware, and route mounting.
+- `server.js` - starts the HTTP server.
+- `db/db.js` - MongoDB connection.
+- `models/user.model.js` - user schema and helpers.
+- `models/captain.model.js` - captain schema and helpers.
+- `models/blackListToken.js` - blacklisted JWT storage.
+- `routes/user.routes.js` - user auth routes.
+- `routes/captain.routes.js` - captain auth routes.
+- `controller/user.controller.js` - user controllers.
+- `controller/captain.controller.js` - captain controllers.
+- `services/user.service.js` - user create logic.
+- `services/captain.service.js` - captain create logic.
+- `middlewares/auth.middleware.js` - authorization middleware.
 
 ## Notes
 
-- Passwords are hashed using `bcrypt` before storing in MongoDB.
-- JWT tokens are generated with `jsonwebtoken` using `JWT_SECRET`.
-- The backend uses `cookie-parser`, `cors`, and `express-validator`.
-- The server listens on `process.env.PORT || 3000`.
-
-## Directory structure
-
-```
-backend/
-  app.js
-  server.js
-  package.json
-  .env
-  db/
-    db.js
-  models/
-    user.model.js
-    captain.model.js
-  routes/
-    user.routes.js
-    captain.routes.js
-  controller/
-    user.controller.js
-    captain.controller.js
-  services/
-    user.service.js
-    captain.service.js
-  middlewares/
-    auth.middleware.js
-```
+- Passwords are hashed with `bcrypt` before saving.
+- `jsonwebtoken` is used for token creation and verification.
+- Input validation is performed by `express-validator`.
+- CORS and cookie parsing are enabled via `cors` and `cookie-parser`.
