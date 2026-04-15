@@ -22,7 +22,7 @@ module.exports.createCaptain = async ({
             lastname
         },
         email,
-        password : await captainModel.hashPassword(password),
+        password,
         vehicle : {
             color,
             plate,
