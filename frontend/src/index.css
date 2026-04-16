@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+.input {
+  @apply w-full px-4 py-3 bg-gray-100 rounded-lg outline-none focus:bg-white;
+}
+
+.btn-black {
+  @apply w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-900;
+}
+
+.btn-yellow {
+  @apply w-full flex justify-center items-center bg-yellow-400 py-3 rounded-lg font-semibold mt-3;
+}
