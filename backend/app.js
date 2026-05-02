@@ -14,7 +14,7 @@ const rideRoutes     = require('./routes/ride.routes');
 
 connectDB();
 
-app.use(cors({ origin: '*', credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
